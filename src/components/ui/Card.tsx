@@ -1,68 +1,74 @@
 // src/components/ui/Card.tsx
 
-import { type ReactNode } from "react";
+import { cn } from '@/lib/utils/cn';
+import type { HTMLAttributes, ReactNode } from 'react';
 
-interface CardProps {
+interface CardProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
-  className?: string;
-  padding?: "none" | "sm" | "md" | "lg";
-  hover?: boolean;
+  padding?: 'none' | 'sm' | 'md' | 'lg';
 }
 
-const paddingStyles = {
-  none: "",
-  sm: "p-4",
-  md: "p-5",
-  lg: "p-6",
+const paddingClasses = {
+  none: '',
+  sm: 'p-4',
+  md: 'p-5',
+  lg: 'p-6',
 };
 
-export default function Card({
+export function Card({
   children,
-  className = "",
-  padding = "md",
-  hover = false,
+  padding = 'md',
+  className,
+  ...props
 }: CardProps) {
   return (
     <div
-      className={`
-        bg-surface
-        border border-surface-border
-        rounded-xl
-        shadow-xs
-        ${paddingStyles[padding]}
-        ${hover ? "transition-shadow duration-200 hover:shadow-md" : ""}
-        ${className}
-      `}
+      className={cn(
+        'bg-surface rounded-lg border border-surface-border shadow-sm',
+        paddingClasses[padding],
+        className
+      )}
+      {...props}
     >
       {children}
     </div>
   );
 }
 
-// Subcomponents for structured layouts
-
-interface CardHeaderProps {
-  title: string;
-  subtitle?: string;
-  action?: ReactNode;
+export function CardHeader({
+  children,
+  className,
+}: {
+  children: ReactNode;
   className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        'flex items-center justify-between mb-4',
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
 }
 
-export function CardHeader({
-  title,
-  subtitle,
-  action,
-  className = "",
-}: CardHeaderProps) {
+export function CardTitle({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
   return (
-    <div className={`flex items-center justify-between mb-4 ${className}`}>
-      <div>
-        <h3 className="text-sm font-semibold text-text-primary">{title}</h3>
-        {subtitle && (
-          <p className="text-xs text-text-muted mt-0.5">{subtitle}</p>
-        )}
-      </div>
-      {action && <div>{action}</div>}
-    </div>
+    <h3
+      className={cn(
+        'text-base font-semibold text-text-primary',
+        className
+      )}
+    >
+      {children}
+    </h3>
   );
 }

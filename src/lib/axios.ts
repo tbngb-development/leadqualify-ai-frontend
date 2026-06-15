@@ -1,86 +1,63 @@
-import { AUTH_ENDPOINTS } from "@/constants/api-routes/auth-endpoint";
-import { ADMIN_ROUTES } from "@/constants/routes/admin.routes";
-import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
+// src/lib/axios.ts
 
-const api = axios.create({
-  baseURL: "/api/v1",
-  withCredentials: true, // sends httpOnly cookies automatically
+import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
+
+export const apiClient = axios.create({
+  baseURL: BASE_URL,
   headers: {
-    "Content-Type": "application/json",
+    'Content-Type': 'application/json',
   },
+  timeout: 30000,
 });
 
-// track if refresh is already in progress to avoid infinite loops
-let isRefreshing = false;
-
-// queue failed requests while refresh is in progress
-type QueueItem = {
-  resolve: (value?: unknown) => void;
-  reject: (reason?: unknown) => void;
-};
-
-let failedQueue: QueueItem[] = [];
-
-const processQueue = (error: AxiosError | null) => {
-  failedQueue.forEach((item) => {
-    if (error) {
-      item.reject(error);
-    } else {
-      item.resolve();
+// Request interceptor — attach Bearer token
+apiClient.interceptors.request.use(
+  (config: InternalAxiosRequestConfig) => {
+    // Read token directly from localStorage to avoid circular dependency
+    // with Zustand store (store imports this client)
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = localStorage.getItem('auth-storage');
+        if (raw) {
+          const parsed = JSON.parse(raw) as {
+            state?: { token?: string };
+          };
+          const token = parsed?.state?.token;
+          if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+          }
+        }
+      } catch {
+        // silently ignore parse errors
+      }
     }
-  });
-  failedQueue = [];
-};
-
-api.interceptors.response.use(
-  (response) => response,
-
-  async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & {
-      _retry?: boolean;
-    };
-
-    // only attempt refresh on 401 and if not already retried
-    if (error.response?.status !== 401 || originalRequest._retry) {
-      return Promise.reject(error);
-    }
-
-    // don't refresh if the failed request IS the refresh endpoint
-    if (originalRequest.url?.includes("/auth/refresh")) {
-      clearStoreAndRedirect();
-      return Promise.reject(error);
-    }
-
-    if (isRefreshing) {
-      // queue this request until refresh completes
-      return new Promise((resolve, reject) => {
-        failedQueue.push({ resolve, reject });
-      })
-        .then(() => api(originalRequest))
-        .catch((err) => Promise.reject(err));
-    }
-
-    originalRequest._retry = true;
-    isRefreshing = true;
-
-    try {
-      await api.post(AUTH_ENDPOINTS.REFRESH_TOKEN);
-      processQueue(null);
-      return api(originalRequest);
-    } catch (refreshError) {
-      processQueue(refreshError as AxiosError);
-      clearStoreAndRedirect();
-      return Promise.reject(refreshError);
-    } finally {
-      isRefreshing = false;
-    }
+    return config;
   },
+  (error: AxiosError) => Promise.reject(error)
 );
 
-function clearStoreAndRedirect() {
-  if (typeof window === "undefined") return;
+// Response interceptor — handle 401 + extract error message
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError<{ error?: string; message?: string }>) => {
+    if (error.response?.status === 401) {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('auth-storage');
+        const isAdminRoute = window.location.pathname.startsWith('/admin');
+        window.location.href = isAdminRoute ? '/admin/login' : '/login';
+      }
+    }
+    // Normalise error message
+    const message =
+      error.response?.data?.error ??
+      error.response?.data?.message ??
+      error.message ??
+      'An unexpected error occurred';
 
-  window.location.href = ADMIN_ROUTES.LOGIN;
-}
+    return Promise.reject(new Error(message));
+  }
+);
 
-export default api;
+export default apiClient;

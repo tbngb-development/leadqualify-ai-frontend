@@ -1,17 +1,16 @@
 // src/app/layout.tsx
 
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "@/styles/globals.css";
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import { Toaster } from 'sonner';
+import '@/styles/globals.css';
+import { Providers } from './providers';
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: {
-    default: "LeadQualify AI",
-    template: "%s | LeadQualify AI",
-  },
-  description: "AI-powered lead qualification platform",
+  title: 'Vapi AI Lead Qualification',
+  description: 'AI-powered lead qualification system',
 };
 
 export default function RootLayout({
@@ -20,8 +19,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} antialiased`}>{children}</body>
+    <html lang="en" className={inter.variable}>
+      <body>
+        <Providers>
+          {children}
+          <Toaster
+            position="top-right"
+            richColors
+            closeButton
+            duration={4000}
+          />
+        </Providers>
+      </body>
     </html>
   );
 }

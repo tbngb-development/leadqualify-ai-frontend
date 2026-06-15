@@ -1,54 +1,44 @@
 // src/components/ui/EmptyState.tsx
 
-import { type ReactNode } from "react";
-import Button from "@/components/ui/Button";
-import { Plus } from "lucide-react";
+import { cn } from '@/lib/utils/cn';
+import type { ReactNode } from 'react';
 
 interface EmptyStateProps {
-  icon: ReactNode;
+  icon?: ReactNode;
   title: string;
-  description: string;
-  actionLabel?: string;
-  onAction?: () => void;
+  description?: string;
+  action?: ReactNode;
+  className?: string;
 }
 
-export default function EmptyState({
+export function EmptyState({
   icon,
   title,
   description,
-  actionLabel,
-  onAction,
+  action,
+  className,
 }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-      {/* Icon */}
-      <div className="relative mb-5">
-        <div className="w-16 h-16 rounded-2xl bg-surface-subtle border border-surface-border flex items-center justify-center text-text-placeholder">
+    <div
+      className={cn(
+        'flex flex-col items-center justify-center py-16 px-4 text-center',
+        className
+      )}
+    >
+      {icon && (
+        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-surface-subtle text-text-muted">
           {icon}
         </div>
-        <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-surface border-2 border-surface-border flex items-center justify-center">
-          <Plus className="w-3 h-3 text-text-placeholder" />
-        </div>
-      </div>
-
-      {/* Text */}
-      <h3 className="text-sm font-semibold text-text-primary mb-1">
+      )}
+      <h3 className="text-base font-semibold text-text-primary mb-1">
         {title}
       </h3>
-      <p className="text-sm text-text-muted max-w-sm leading-relaxed mb-5">
-        {description}
-      </p>
-
-      {/* Action */}
-      {actionLabel && onAction && (
-        <Button
-          icon={<Plus className="w-4 h-4" />}
-          onClick={onAction}
-          size="sm"
-        >
-          {actionLabel}
-        </Button>
+      {description && (
+        <p className="text-sm text-text-muted max-w-xs mb-5">
+          {description}
+        </p>
       )}
+      {action}
     </div>
   );
 }
