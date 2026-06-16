@@ -1,80 +1,55 @@
 // src/components/layout/Header.tsx
 
-"use client";
+'use client';
 
-import { useRouter } from "next/navigation";
-import { Bell, Search, LogOut } from "lucide-react";
-import { ADMIN_ROUTES } from "@/constants/routes/admin.routes";
+import { useAuthStore } from '@/store/authStore';
+import { Bell } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 
-export default function Header() {
-  const router = useRouter();
+const routeLabels: Record<string, string> = {
+  '/dashboard': 'Dashboard',
+  '/campaigns': 'Campaigns',
+  '/assistants': 'Assistants',
+  '/leads': 'Leads',
+  '/calls': 'Calls',
+  '/users': 'Team',
+  '/settings': 'Settings',
+};
 
-  const handleLogout = () => {
-    sessionStorage.removeItem("auth_token");
-    sessionStorage.removeItem("user_email");
-    router.push(ADMIN_ROUTES.LOGIN);
-  };
+function getPageTitle(pathname: string): string {
+  // Exact match
+  if (routeLabels[pathname]) return routeLabels[pathname];
+  // Prefix match
+  const matched = Object.keys(routeLabels).find(
+    (key) => key !== '/dashboard' && pathname.startsWith(key)
+  );
+  return matched ? routeLabels[matched] : 'Overview';
+}
 
-  const userEmail =
-    typeof window !== "undefined"
-      ? sessionStorage.getItem("user_email") || "admin@leadqualify.ai"
-      : "admin@leadqualify.ai";
-
-  const initials = userEmail
-    .split("@")[0]
-    .split(/[._-]/)
-    .map((w: string) => w.charAt(0).toUpperCase())
-    .slice(0, 2)
-    .join("");
+export function Header() {
+  const pathname = usePathname();
+  const { user } = useAuthStore();
+  const title = getPageTitle(pathname);
 
   return (
-    <header className="flex items-center justify-between h-14 px-6 bg-surface border-b border-surface-border shrink-0">
-      {/* Search */}
-      <div className="flex items-center gap-2 w-full max-w-md">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-placeholder" />
-          <input
-            type="text"
-            placeholder="Search campaigns, properties, leads..."
-            className="w-full pl-9 pr-4 py-2 text-sm text-text-primary bg-surface-muted border border-surface-border rounded-lg placeholder:text-text-placeholder focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all duration-150"
-          />
-        </div>
-      </div>
+    <header className="h-14 border-b border-surface-border bg-surface flex items-center justify-between px-5 shrink-0 sticky top-0 z-30">
+      <h1 className="text-base font-semibold text-text-primary">{title}</h1>
 
-      {/* Right side */}
       <div className="flex items-center gap-3">
-        {/* Notifications */}
-        <button className="relative flex items-center justify-center w-9 h-9 rounded-lg text-text-muted hover:bg-surface-hover transition-colors cursor-pointer">
-          <Bell className="w-[18px] h-[18px]" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-error-500 rounded-full" />
-        </button>
-
-        {/* Divider */}
-        <div className="w-px h-6 bg-surface-border" />
-
-        {/* User */}
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center">
-            <span className="text-xs font-bold text-brand-600">{initials}</span>
-          </div>
-          <div className="hidden sm:block text-left">
-            <p className="text-sm font-medium text-text-primary leading-tight">
-              Admin
-            </p>
-            <p className="text-xs text-text-muted leading-tight truncate max-w-[140px]">
-              {userEmail}
-            </p>
-          </div>
-        </div>
-
-        {/* Logout */}
         <button
-          onClick={handleLogout}
-          title="Sign out"
-          className="flex items-center justify-center w-8 h-8 rounded-lg text-text-muted hover:bg-surface-hover hover:text-error-500 transition-colors cursor-pointer"
+          className="flex h-8 w-8 items-center justify-center rounded-md text-text-muted hover:bg-surface-hover transition-colors"
+          aria-label="Notifications"
         >
-          <LogOut className="w-4 h-4" />
+          <Bell size={16} />
         </button>
+        <div className="flex items-center gap-2">
+          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-100 text-brand-600 text-xs font-semibold">
+            {user?.name?.charAt(0).toUpperCase() ?? 'U'}
+          </div>
+          <span className="hidden sm:block text-sm font-medium text-text-secondary">
+            {user?.name}
+          </span>
+        </div>
       </div>
     </header>
   );

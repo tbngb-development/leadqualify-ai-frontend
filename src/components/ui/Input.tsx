@@ -1,65 +1,64 @@
 // src/components/ui/Input.tsx
 
-"use client";
-
-import { forwardRef, type InputHTMLAttributes, type ReactNode } from "react";
+import { cn } from '@/lib/utils/cn';
+import type { InputHTMLAttributes, ReactNode } from 'react';
+import { forwardRef } from 'react';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
   hint?: string;
-  icon?: ReactNode;
-  fullWidth?: boolean;
+  leftIcon?: ReactNode;
+  rightIcon?: ReactNode;
 }
 
-const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, hint, icon, fullWidth = true, className = "", id, ...props }, ref) => {
-    const inputId = id || label?.toLowerCase().replace(/\s+/g, "-");
+export const Input = forwardRef<HTMLInputElement, InputProps>(
+  (
+    { label, error, hint, leftIcon, rightIcon, className, id, ...props },
+    ref
+  ) => {
+    const inputId = id ?? label?.toLowerCase().replace(/\s+/g, '-');
 
     return (
-      <div className={`space-y-1.5 ${fullWidth ? "w-full" : ""}`}>
+      <div className="flex flex-col gap-1.5">
         {label && (
           <label
             htmlFor={inputId}
-            className="block text-sm font-medium text-text-primary"
+            className="text-sm font-medium text-text-secondary"
           >
             {label}
           </label>
         )}
         <div className="relative">
-          {icon && (
+          {leftIcon && (
             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-text-placeholder">
-              {icon}
+              {leftIcon}
             </div>
           )}
           <input
             ref={ref}
             id={inputId}
-            className={`
-              w-full
-              px-3.5 py-2.5
-              text-sm text-text-primary
-              bg-surface
-              border rounded-lg
-              placeholder:text-text-placeholder
-              transition-all duration-150
-              focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500
-              disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-surface-muted
-              ${icon ? "pl-10" : ""}
-              ${error
-                ? "border-error-500 focus:ring-error-500/20 focus:border-error-500"
-                : "border-surface-border"
-              }
-              ${className}
-            `}
+            className={cn(
+              'w-full h-9 rounded-md border bg-surface px-3 text-sm text-text-primary placeholder:text-text-placeholder',
+              'transition-colors duration-150',
+              'focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500',
+              error
+                ? 'border-error-500 focus:ring-error-500 focus:border-error-500'
+                : 'border-surface-border hover:border-text-placeholder',
+              leftIcon && 'pl-9',
+              rightIcon && 'pr-9',
+              className
+            )}
             {...props}
           />
+          {rightIcon && (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-text-placeholder">
+              {rightIcon}
+            </div>
+          )}
         </div>
         {error && (
-          <p className="text-xs text-error-500 flex items-center gap-1">
-            <span className="inline-block w-1 h-1 rounded-full bg-error-500" />
-            {error}
-          </p>
+          <p className="text-xs text-error-500">{error}</p>
         )}
         {hint && !error && (
           <p className="text-xs text-text-muted">{hint}</p>
@@ -69,5 +68,4 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
   }
 );
 
-Input.displayName = "Input";
-export default Input;
+Input.displayName = 'Input';

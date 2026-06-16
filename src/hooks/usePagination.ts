@@ -1,54 +1,23 @@
-import { useState, useCallback } from "react";
+// src/hooks/usePagination.ts
 
-interface PaginationMeta {
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-  hasNextPage: boolean;
-  hasPreviousPage: boolean;
-}
+import { useState } from 'react';
 
 interface UsePaginationOptions {
   initialPage?: number;
   initialLimit?: number;
 }
 
-interface UsePaginationReturn {
-  page: number;
-  limit: number;
-  meta: PaginationMeta | null;
-  setMeta: (meta: PaginationMeta) => void;
-  setPage: (page: number) => void;
-  setLimit: (limit: number) => void;
-  queryParams: { page: number; limit: number };
+export function usePagination({
+  initialPage = 1,
+  initialLimit = 20,
+}: UsePaginationOptions = {}) {
+  const [page, setPage] = useState(initialPage);
+  const [limit, setLimit] = useState(initialLimit);
+
+  const goToPage = (p: number) => setPage(p);
+  const nextPage = () => setPage((prev) => prev + 1);
+  const prevPage = () => setPage((prev) => Math.max(1, prev - 1));
+  const reset = () => setPage(1);
+
+  return { page, limit, setPage: goToPage, nextPage, prevPage, reset, setLimit };
 }
-
-export const usePagination = (
-  options: UsePaginationOptions = {}
-): UsePaginationReturn => {
-  const { initialPage = 1, initialLimit = 10 } = options;
-
-  const [page, setPageState] = useState(initialPage);
-  const [limit, setLimitState] = useState(initialLimit);
-  const [meta, setMeta] = useState<PaginationMeta | null>(null);
-
-  const setPage = useCallback((newPage: number) => {
-    setPageState(newPage);
-  }, []);
-
-  const setLimit = useCallback((newLimit: number) => {
-    setLimitState(newLimit);
-    setPageState(1); // Reset to first page when limit changes
-  }, []);
-
-  return {
-    page,
-    limit,
-    meta,
-    setMeta,
-    setPage,
-    setLimit,
-    queryParams: { page, limit },
-  };
-};

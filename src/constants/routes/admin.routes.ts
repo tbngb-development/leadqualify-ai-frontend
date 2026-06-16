@@ -1,7 +1,7 @@
 // src/constants/routes/admin.routes.ts
 
 export const ADMIN_ROUTES = {
-  DASHBOARD: "/admin/dashboard",
+  DASHBOARD: "/admin/(dashboard)/dashboard",
   PROPERTIES: "/admin/properties",
   PROPERTIES_UPLOAD: "/admin/properties/upload",
   LEADS: "/admin/leads",
