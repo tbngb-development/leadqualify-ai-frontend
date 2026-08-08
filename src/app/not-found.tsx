@@ -1,8 +1,8 @@
 // src/app/not-found.tsx
 
 import Link from "next/link";
-import { ADMIN_ROUTES } from "@/constants/routes/admin.routes";
 import GoBackButton from "@/components/ui/GoBackButton";
+import { USER_ROUTES } from "@/constants/routes/user.routes";
 
 export default function NotFound() {
   return (
@@ -72,7 +72,7 @@ export default function NotFound() {
         {/* Actions */}
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
           <Link
-            href={ADMIN_ROUTES.DASHBOARD}
+            href={USER_ROUTES.LOGIN}
             className="
               inline-flex items-center justify-center gap-2
               w-full sm:w-auto
