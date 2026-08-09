@@ -98,9 +98,8 @@ export interface PaginationMeta {
 export interface PaginatedData<T> {
   items: T[];
   pagination: PaginationMeta;
-  // Temp fix for paginated Get calls api
-  calls?: Call[]
-  leads?: Lead[]
+  calls?:Call[]
+  leads?:Lead[]
 }
 
 export interface PaginatedResponse<T> {
@@ -154,10 +153,7 @@ export interface TenantStats {
 // ─── Assistant ────────────────────────────────────────────────────────────────
 
 export interface AssistantConfig {
-  voice?: {
-    provider: string;
-    voiceId: string;
-  };
+  voice?: { provider: string; voiceId: string };
   [key: string]: unknown;
 }
 
@@ -215,10 +211,7 @@ export interface Campaign {
   startedAt?: string;
   completedAt?: string;
   createdAt: string;
-  assistant: {
-    name: string;
-    bolnaId: string;
-  };
+  assistant: { name: string; bolnaId: string };
   brochure?: BrochureSummary | null;
 }
 
@@ -243,9 +236,12 @@ export interface CampaignStats {
 export type UpdateCampaignInput = Partial<CreateCampaignInput>;
 
 export interface UploadResult {
-  invalid: number;
   total: number;
-  errors?: string[];
+  valid: number;
+  imported: number;
+  duplicates: number;
+  invalid: number;
+  duplicateNumbers: string[];
 }
 
 // ─── Brochure ─────────────────────────────────────────────────────────────────
@@ -272,19 +268,16 @@ export interface Brochure {
   fileSizeMB: string;
   pageCount: number;
   rawTextLength: number;
-
   projectName?: string | null;
   developerName?: string | null;
   reraNumber?: string | null;
   projectWebsite?: string | null;
   contactNumber?: string | null;
-
   city?: string | null;
   area?: string | null;
   state?: string | null;
   landmark?: string | null;
   fullAddress?: string | null;
-
   propertyTypes: string[];
   configurations: string[];
   totalUnits?: number | null;
@@ -293,7 +286,6 @@ export interface Brochure {
   sizeMin?: number | null;
   sizeMax?: number | null;
   sizeUnit?: string | null;
-
   startingPrice?: number | null;
   maxPrice?: number | null;
   pricePerSqft?: number | null;
@@ -301,30 +293,25 @@ export interface Brochure {
   paymentPlan?: string | null;
   bankApprovals: string[];
   maintenanceCharge?: string | null;
-
   possessionDate?: string | null;
   launchDate?: string | null;
   constructionStatus?: string | null;
-
   amenities: string[];
   specifications: string[];
   nearbyInfrastructure: string[];
   usps: string[];
-
   minimumBudget?: number | null;
   maximumBudget?: number | null;
   targetBuyerProfile?: string | null;
   preferredLocations: string[];
   investmentType: string[];
   keyQualifyingQuestions: string[];
-
   confidence: number;
   extractionWarnings: string[];
   isConfirmed: boolean;
   confirmedAt?: string | null;
   createdAt: string;
   updatedAt: string;
-
   campaigns: { id: string; name: string; status: string }[];
 }
 
@@ -352,19 +339,16 @@ export interface FlattenedBrochure {
   fileSizeMB: string;
   pageCount: number;
   rawTextLength: number;
-
   projectName?: string | null;
   developerName?: string | null;
   reraNumber?: string | null;
   projectWebsite?: string | null;
   contactNumber?: string | null;
-
   city?: string | null;
   area?: string | null;
   state?: string | null;
   landmark?: string | null;
   fullAddress?: string | null;
-
   propertyTypes: string[];
   configurations: string[];
   totalUnits?: number | null;
@@ -373,7 +357,6 @@ export interface FlattenedBrochure {
   sizeMin?: number | null;
   sizeMax?: number | null;
   sizeUnit?: string | null;
-
   startingPrice?: number | null;
   maxPrice?: number | null;
   pricePerSqft?: number | null;
@@ -381,23 +364,19 @@ export interface FlattenedBrochure {
   paymentPlan?: string | null;
   bankApprovals: string[];
   maintenanceCharge?: string | null;
-
   possessionDate?: string | null;
   launchDate?: string | null;
   constructionStatus?: string;
-
   amenities: string[];
   specifications: string[];
   nearbyInfrastructure: string[];
   usps: string[];
-
   minimumBudget?: number | null;
   maximumBudget?: number | null;
   targetBuyerProfile?: string | null;
   preferredLocations: string[];
   investmentType: string[];
   keyQualifyingQuestions: string[];
-
   confidence: number;
   extractionWarnings: string[];
 }
@@ -420,11 +399,7 @@ export interface PropertyDetails {
   totalUnits: number | null;
   totalTowers: number | null;
   totalFloors: number | null;
-  sizeRange: {
-    min: number | null;
-    max: number | null;
-    unit: string | null;
-  };
+  sizeRange: { min: number | null; max: number | null; unit: string | null };
   pricing: {
     startingPrice: number | null;
     maxPrice: number | null;
@@ -468,13 +443,25 @@ export interface Lead {
   campaignId: string;
   metadata?: Record<string, unknown>;
   createdAt: string;
-  campaign: {
-    name: string;
-  };
+  campaign: { name: string };
 }
 
 export interface LeadDetail extends Lead {
   calls: Call[];
+}
+
+// ─── Lead Stats ───────────────────────────────────────────────────────────────
+
+export interface LeadStats {
+  total: number;
+  pending: number;
+  calling: number;
+  called: number;
+  failed: number;
+  noAnswer: number;
+  doNotCall: number;
+  qualified: number;
+  qualificationRate: string;
 }
 
 // ─── Call Analysis ────────────────────────────────────────────────────────────
@@ -514,13 +501,8 @@ export interface Call {
   summary?: string;
   startedAt?: string;
   endedAt?: string;
-  lead: {
-    name: string;
-    phone: string;
-  };
-  campaign: {
-    name: string;
-  };
+  lead: { name: string; phone: string };
+  campaign: { name: string };
   callAnalysis?: CallAnalysis | null;
 }
 
@@ -542,13 +524,25 @@ export interface CallTranscriptResponse {
   callAnalysis: CallAnalysis | null;
 }
 
+// ─── Call Stats ───────────────────────────────────────────────────────────────
+
+export interface CallStats {
+  total: number;
+  completed: number;
+  failed: number;
+  noAnswer: number;
+  busy: number;
+  avgDuration: number;
+  qualifiedCount: number;
+  qualificationRate: string;
+  dispositionBreakdown: Record<string, number>;
+  temperatureBreakdown: Record<string, number>;
+}
+
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 export interface DashboardOverview {
-  campaigns: {
-    total: number;
-    active: number;
-  };
+  campaigns: { total: number; active: number };
   leads: {
     total: number;
     qualified: number;
@@ -562,8 +556,6 @@ export interface DashboardOverview {
     successRate: string;
   };
 }
-
-// ─── Dashboard Activity ───────────────────────────────────────────────────────
 
 export interface DashboardQualifiedLead {
   leadId: string;
@@ -627,14 +619,10 @@ export interface RegisterInput {
 export interface AuthResponse {
   token: string;
   user: User;
-  tenant: {
-    id: string;
-    name: string;
-    apiKey: string;
-  };
+  tenant: { id: string; name: string; apiKey: string };
 }
 
-// ─── Users (Team) ─────────────────────────────────────────────────────────────
+// ─── Users ────────────────────────────────────────────────────────────────────
 
 export interface CreateUserInput {
   name: string;
@@ -654,6 +642,11 @@ export interface UpdateUserInput {
 export interface LeadQueryParams {
   campaignId?: string;
   status?: LeadStatus;
+  doNotCall?: boolean;
+  dateFrom?: string;
+  dateTo?: string;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
   page?: number;
   limit?: number;
   search?: string;
@@ -663,6 +656,12 @@ export interface CallQueryParams {
   campaignId?: string;
   leadId?: string;
   status?: CallStatus;
+  disposition?: Disposition;
+  leadTemperature?: LeadTemperature;
+  dateFrom?: string;
+  dateTo?: string;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
   page?: number;
   limit?: number;
 }

@@ -1,12 +1,12 @@
 // src/hooks/useLeads.ts
 
-'use client';
+"use client";
 
-import { useQuery } from '@tanstack/react-query';
-import { leadsApi } from '@/lib/api/leads';
-import type { LeadQueryParams } from '@/types';
+import { useQuery } from "@tanstack/react-query";
+import { leadsApi } from "@/lib/api/leads";
+import type { LeadQueryParams } from "@/types";
 
-export const LEADS_KEY = ['leads'] as const;
+export const LEADS_KEY = ["leads"] as const;
 
 export function useLeads(params: LeadQueryParams = {}) {
   return useQuery({
@@ -20,5 +20,13 @@ export function useLead(id: string) {
     queryKey: [...LEADS_KEY, id],
     queryFn: () => leadsApi.getById(id),
     enabled: Boolean(id),
+  });
+}
+
+export function useLeadStats(params: { campaignId?: string }) {
+  return useQuery({
+    queryKey: [...LEADS_KEY, "stats", params],
+    queryFn: () => leadsApi.getStats(params),
+    enabled: Boolean(params.campaignId),
   });
 }

@@ -1,15 +1,14 @@
 // src/components/leads/LeadsTable.tsx
 
-'use client';
+"use client";
 
-import { Badge } from '@/components/ui/Badge';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { Pagination } from '@/components/ui/Pagination';
-import { LeadStatusBadge } from './LeadStatusBadge';
-import { formatDate } from '@/lib/utils/formatDate';
-import type { Lead, PaginationMeta } from '@/types';
-import { Users } from 'lucide-react';
-import Link from 'next/link';
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Pagination } from "@/components/ui/Pagination";
+import { LeadStatusBadge } from "./LeadStatusBadge";
+import { formatDate } from "@/lib/utils/formatDate";
+import type { Lead, PaginationMeta } from "@/types";
+import { Ban, Users } from "lucide-react";
+import Link from "next/link";
 
 interface LeadsTableProps {
   leads: Lead[];
@@ -52,6 +51,9 @@ export function LeadsTable({
                   Status
                 </th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-text-muted uppercase tracking-wide">
+                  DNC
+                </th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-text-muted uppercase tracking-wide">
                   Campaign
                 </th>
                 <th className="text-left px-5 py-3 text-xs font-medium text-text-muted uppercase tracking-wide">
@@ -82,10 +84,20 @@ export function LeadsTable({
                     {lead.phone}
                   </td>
                   <td className="px-4 py-3 text-text-muted">
-                    {lead.company ?? '—'}
+                    {lead.company ?? "—"}
                   </td>
                   <td className="px-4 py-3">
                     <LeadStatusBadge status={lead.status} />
+                  </td>
+                  <td className="px-4 py-3">
+                    {lead.doNotCall ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-error-100 px-2 py-0.5 text-xs font-medium text-error-700">
+                        <Ban size={10} />
+                        DNC
+                      </span>
+                    ) : (
+                      <span className="text-xs text-text-muted">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <Link

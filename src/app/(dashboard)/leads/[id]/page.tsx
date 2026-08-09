@@ -3,27 +3,40 @@
 "use client";
 
 import { LeadStatusBadge } from "@/components/leads/LeadStatusBadge";
+import { CallStatsCards } from "@/components/calls/CallStatsCards";
 import { Card } from "@/components/ui/Card";
 import { PageSpinner } from "@/components/ui/Spinner";
 import { useLead } from "@/hooks/useLeads";
+import { useCallStats } from "@/hooks/useCalls";
 import { formatDate, formatDateTime } from "@/lib/utils/formatDate";
 import { formatDuration } from "@/lib/utils/formatDuration";
-import { Building2, ChevronLeft, Mail, Phone, User } from "lucide-react";
+import {
+  Ban,
+  Building2,
+  ChevronLeft,
+  Mail,
+  Phone,
+  User,
+} from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
 export default function LeadDetailPage() {
   const params = useParams();
   const id = String(params.id);
-  const { data: lead, isLoading } = useLead(id);
 
-  console.log("leads data from detail page: ", lead);
+  const { data: lead, isLoading } = useLead(id);
+  const { data: callStats, isLoading: statsLoading } = useCallStats({
+    leadId: id,
+  });
 
   if (isLoading) return <PageSpinner />;
-  if (!lead) return <p className="text-text-muted text-sm">Lead not found.</p>;
+  if (!lead)
+    return <p className="text-text-muted text-sm">Lead not found.</p>;
 
   return (
-    <div className="flex flex-col gap-5 max-w-3xl">
+    <div className="flex flex-col gap-5 max-w-6xl">
+      {/* Header */}
       <div>
         <Link
           href="/leads"
@@ -32,9 +45,15 @@ export default function LeadDetailPage() {
           <ChevronLeft size={14} />
           Back to Leads
         </Link>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <h2 className="text-xl font-bold text-text-primary">{lead.name}</h2>
           <LeadStatusBadge status={lead.status} />
+          {lead.doNotCall && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-error-100 px-2.5 py-1 text-xs font-medium text-error-700">
+              <Ban size={10} />
+              Do Not Call
+            </span>
+          )}
         </div>
         <p className="text-sm text-text-muted mt-1">
           Campaign:{" "}
@@ -101,7 +120,17 @@ export default function LeadDetailPage() {
         </div>
       </Card>
 
-      {/* Call History */}
+      {/* Call stats for this lead */}
+      {!statsLoading && callStats && callStats.total > 0 && (
+        <div>
+          <p className="text-sm font-semibold text-text-primary mb-3">
+            Call Summary
+          </p>
+          <CallStatsCards stats={callStats} />
+        </div>
+      )}
+
+      {/* Call history */}
       <Card>
         <h3 className="text-sm font-semibold text-text-primary mb-4">
           Call History
@@ -121,11 +150,21 @@ export default function LeadDetailPage() {
                     {formatDateTime(call.startedAt)}
                   </span>
                 </div>
-                <div className="flex items-center gap-4 mt-1 text-xs text-text-muted">
+                <div className="flex items-center gap-4 mt-1 text-xs text-text-muted flex-wrap">
                   <span>Status: {call.status}</span>
                   {call.duration && (
                     <span>Duration: {formatDuration(call.duration)}</span>
                   )}
+                  {/* Show disposition if available */}
+                  {"callAnalysis" in call &&
+                    (call).callAnalysis?.disposition && (
+                      <span className="text-brand-600 font-medium">
+                        {(call).callAnalysis.disposition.replace(
+                          /_/g,
+                          " "
+                        )}
+                      </span>
+                    )}
                 </div>
               </div>
             ))}

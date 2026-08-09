@@ -1,40 +1,38 @@
 // src/app/(dashboard)/campaigns/[id]/page.tsx
 
-'use client';
+"use client";
 
-import { CampaignStats } from '@/components/campaigns/CampaignStats';
-import { CampaignActions } from '@/components/campaigns/CampaignActions';
-import { CampaignStatusBadge } from '@/components/campaigns/CampaignStatusBadge';
-import { CSVUploader } from '@/components/campaigns/CSVUploader';
-import { Card } from '@/components/ui/Card';
-import { PageSpinner } from '@/components/ui/Spinner';
-import { useCampaign } from '@/hooks/useCampaigns';
-import { formatDate } from '@/lib/utils/formatDate';
-import { Bot, ChevronLeft, Phone, Users } from 'lucide-react';
-import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { useAuthStore } from '@/store/authStore';
+import { CampaignStats } from "@/components/campaigns/CampaignStats";
+import { CampaignActions } from "@/components/campaigns/CampaignActions";
+import { CampaignStatusBadge } from "@/components/campaigns/CampaignStatusBadge";
+import { CSVUploader } from "@/components/campaigns/CSVUploader";
+import { Card } from "@/components/ui/Card";
+import { PageSpinner } from "@/components/ui/Spinner";
+import { useCampaign } from "@/hooks/useCampaigns";
+import { formatDate } from "@/lib/utils/formatDate";
+import { Bot, ChevronLeft, Phone, Users } from "lucide-react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useAuthStore } from "@/store/authStore";
 
 export default function CampaignDetailPage() {
   const params = useParams();
   const id = String(params.id);
   const { user } = useAuthStore();
-  const canEdit = user?.role !== 'USER';
+  const canEdit = user?.role !== "USER";
 
-  // Poll every 5s while RUNNING
   const { data: campaign, isLoading } = useCampaign(id, true);
 
   if (isLoading) return <PageSpinner />;
   if (!campaign)
     return <p className="text-text-muted text-sm">Campaign not found.</p>;
 
-  const showUploader =
-    canEdit &&
-    (campaign.status === 'DRAFT' || campaign.status === 'PAUSED');
+  // Allow upload for all statuses except FAILED
+  const showUploader = canEdit && campaign.status !== "FAILED";
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Back + Header */}
+      {/* Header */}
       <div>
         <Link
           href="/campaigns"

@@ -190,7 +190,7 @@ export default function CallDetailPage() {
   const analysis = call.callAnalysis ?? transcript?.callAnalysis ?? null;
 
   return (
-    <div className="flex flex-col gap-5 max-w-3xl">
+    <div className="flex flex-col gap-5 max-w-6xl">
       {/* Header */}
       <div>
         <Link

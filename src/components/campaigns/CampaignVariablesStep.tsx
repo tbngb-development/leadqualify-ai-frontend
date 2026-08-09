@@ -19,14 +19,23 @@ import {
 import { useExtractBrochure } from "@/hooks/useBrochure";
 import type { PromptInputField, FlattenedBrochure } from "@/types";
 
-// ── Fields auto-injected from lead data — shown as read-only in the grid ────
+// ─── Fields auto-injected from lead data — hidden entirely ────────────────────
 const LEAD_AUTO_FIELDS = new Set([
   "customer_name",
   "customer_phone",
+  "phone",
   "lead_source",
 ]);
 
-// ── Map brochure extracted fields → prompt variable keys ────────────────────
+// ─── Required fields — must be filled before submit ───────────────────────────
+const REQUIRED_VARIABLES = new Set(["agent_name", "project_short_description"]);
+
+// ─── Character limits per field ───────────────────────────────────────────────
+const CHAR_LIMITS: Record<string, number> = {
+  project_short_description: 100,
+};
+
+// ─── Brochure field mapping ───────────────────────────────────────────────────
 const BROCHURE_TO_VARIABLE_MAP: Record<string, keyof FlattenedBrochure> = {
   project_name: "projectName",
   builder_name: "developerName",
@@ -59,6 +68,7 @@ export function CampaignVariablesStep({
   onBack,
 }: CampaignVariablesStepProps) {
   const [values, setValues] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [brochureLinked, setBrochureLinked] = useState(false);
   const [brochureName, setBrochureName] = useState<string | null>(null);
   const [autoFilledKeys, setAutoFilledKeys] = useState<Set<string>>(new Set());
@@ -66,11 +76,16 @@ export function CampaignVariablesStep({
   const { mutate: extractBrochure, isPending: extracting } =
     useExtractBrochure();
 
-  // ── Initialize empty values when variables arrive ──────────────────────────
+  // ── Visible variables — exclude auto-injected lead fields ─────────────────
+  const visibleVariables = variables.filter(
+    (v) => !LEAD_AUTO_FIELDS.has(v.key)
+  );
+
+  // ── Initialize values ─────────────────────────────────────────────────────
   useEffect(() => {
-    if (variables.length > 0 && Object.keys(values).length === 0) {
+    if (visibleVariables.length > 0 && Object.keys(values).length === 0) {
       const initial: Record<string, string> = {};
-      variables.forEach((v) => {
+      visibleVariables.forEach((v) => {
         initial[v.key] = "";
       });
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -79,7 +94,22 @@ export function CampaignVariablesStep({
   }, [variables]);
 
   const updateValue = (key: string, value: string) => {
+    // Enforce char limit
+    const limit = CHAR_LIMITS[key];
+    if (limit && value.length > limit) return;
+
     setValues((prev) => ({ ...prev, [key]: value }));
+
+    // Clear error on change
+    if (errors[key]) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    }
+
+    // Remove auto-fill indicator if manually edited
     setAutoFilledKeys((prev) => {
       if (!prev.has(key)) return prev;
       const next = new Set(prev);
@@ -88,7 +118,24 @@ export function CampaignVariablesStep({
     });
   };
 
-  // ── Brochure upload → auto-fill matching fields ────────────────────────────
+  // ── Validate required fields ──────────────────────────────────────────────
+  const validate = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    for (const key of REQUIRED_VARIABLES) {
+      if (visibleVariables.some((v) => v.key === key)) {
+        const val = values[key]?.trim() ?? "";
+        if (!val) {
+          newErrors[key] = `${key.replace(/_/g, " ")} is required`;
+        }
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // ── Brochure upload ───────────────────────────────────────────────────────
   const handleBrochureUpload = (file: File) => {
     extractBrochure(
       { file, onProgress: () => {} },
@@ -99,12 +146,11 @@ export function CampaignVariablesStep({
 
           setValues((prev) => {
             const updated = { ...prev };
-
             for (const [varKey, brochureField] of Object.entries(
-              BROCHURE_TO_VARIABLE_MAP,
+              BROCHURE_TO_VARIABLE_MAP
             )) {
               if (!(varKey in updated)) continue;
-              if (updated[varKey]) continue; // don't overwrite manual entries
+              if (updated[varKey]) continue;
 
               const rawValue = brochure[brochureField];
               let stringValue = "";
@@ -115,12 +161,17 @@ export function CampaignVariablesStep({
                 stringValue = String(rawValue);
               }
 
+              // Respect char limit when auto-filling
+              const limit = CHAR_LIMITS[varKey];
+              if (limit && stringValue.length > limit) {
+                stringValue = stringValue.slice(0, limit);
+              }
+
               if (stringValue) {
                 updated[varKey] = stringValue;
                 filled.add(varKey);
               }
             }
-
             return updated;
           });
 
@@ -128,7 +179,7 @@ export function CampaignVariablesStep({
           setBrochureLinked(true);
           setBrochureName(brochure.projectName ?? file.name);
         },
-      },
+      }
     );
   };
 
@@ -146,6 +197,8 @@ export function CampaignVariablesStep({
   };
 
   const handleSubmit = () => {
+    if (!validate()) return;
+
     const filled: Record<string, string> = {};
     for (const [key, value] of Object.entries(values)) {
       if (value.trim() !== "") {
@@ -156,11 +209,11 @@ export function CampaignVariablesStep({
   };
 
   const filledCount = Object.values(values).filter(
-    (v) => v.trim() !== "",
+    (v) => v.trim() !== ""
   ).length;
-  const totalCount = variables.length;
+  const totalCount = visibleVariables.length;
 
-  // ── Loading state ───────────────────────────────────────────────────────────
+  // ── Loading ───────────────────────────────────────────────────────────────
   if (isLoadingVariables) {
     return (
       <Card>
@@ -174,7 +227,7 @@ export function CampaignVariablesStep({
     );
   }
 
-  // ── Error state ─────────────────────────────────────────────────────────────
+  // ── Error ─────────────────────────────────────────────────────────────────
   if (variablesError) {
     return (
       <Card>
@@ -191,8 +244,8 @@ export function CampaignVariablesStep({
     );
   }
 
-  // ── No variables state ──────────────────────────────────────────────────────
-  if (variables.length === 0) {
+  // ── No variables ──────────────────────────────────────────────────────────
+  if (visibleVariables.length === 0) {
     return (
       <div className="flex flex-col gap-5">
         <Card>
@@ -206,7 +259,6 @@ export function CampaignVariablesStep({
             </p>
           </div>
         </Card>
-
         <div className="flex items-center gap-3">
           <Button onClick={() => onSubmit({})} loading={isCreating}>
             Create Campaign
@@ -225,7 +277,7 @@ export function CampaignVariablesStep({
 
   return (
     <div className="flex flex-col gap-5">
-      {/* ── Header ────────────────────────────────────────────────────────── */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-semibold text-text-primary">
@@ -242,7 +294,7 @@ export function CampaignVariablesStep({
         </div>
       </div>
 
-      {/* ── Brochure Upload ───────────────────────────────────────────────── */}
+      {/* Brochure upload */}
       {brochureLinked ? (
         <div className="flex items-center gap-3 rounded-lg bg-green-50 border border-green-100 p-3">
           <CheckCircle2 size={16} className="text-green-500 shrink-0" />
@@ -294,53 +346,67 @@ export function CampaignVariablesStep({
         </button>
       )}
 
-      {/* ── Variable Grid ─────────────────────────────────────────────────── */}
+      {/* Variable grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-        {variables.map((variable) => {
-          const isLeadField = LEAD_AUTO_FIELDS.has(variable.key);
+        {visibleVariables.map((variable) => {
           const isAutoFilled = autoFilledKeys.has(variable.key);
+          const isRequired = REQUIRED_VARIABLES.has(variable.key);
+          const charLimit = CHAR_LIMITS[variable.key];
           const value = values[variable.key] ?? "";
+          const fieldError = errors[variable.key];
 
-          // ── Lead-injected fields — read-only, greyed out ───────────────────
-          if (isLeadField) {
-            return (
-              <div key={variable.key} className="relative">
-                <div className="relative h-14 rounded-lg border border-dashed border-border bg-surface-secondary/40 flex items-center px-3.5">
-                  <span className="text-sm text-text-muted">
-                    {variable.key}
-                  </span>
-                  <span className="absolute -top-2 left-3 px-1 bg-surface text-[10px] font-medium text-text-muted uppercase tracking-wide">
-                    From lead data
-                  </span>
-                </div>
-              </div>
-            );
-          }
-
-          // ── Standard input ────────────────────────────────────────────────
           return (
-            <div key={variable.key} className="relative">
-              <FloatingInput
-                label={variable.key}
-                value={value}
-                onChange={(e) => updateValue(variable.key, e.target.value)}
-              />
-              {isAutoFilled && <AutoFilledDot />}
+            <div key={variable.key} className="relative flex flex-col gap-1">
+              <div className="relative">
+                <FloatingInput
+                  label={`${variable.key}${isRequired ? " *" : ""}`}
+                  value={value}
+                  onChange={(e) => updateValue(variable.key, e.target.value)}
+                />
+                {isAutoFilled && <AutoFilledDot />}
+              </div>
+
+              {/* Char limit counter */}
+              {charLimit && (
+                <p
+                  className={`text-xs text-right ${
+                    value.length >= charLimit
+                      ? "text-error-500"
+                      : "text-text-placeholder"
+                  }`}
+                >
+                  {value.length}/{charLimit}
+                </p>
+              )}
+
+              {/* Validation error */}
+              {fieldError && (
+                <p className="text-xs text-error-500 flex items-center gap-1">
+                  <AlertCircle size={10} />
+                  {fieldError}
+                </p>
+              )}
             </div>
           );
         })}
       </div>
 
-      {/* ── Info footer ───────────────────────────────────────────────────── */}
+      {/* Required fields note */}
+      <p className="text-xs text-text-muted flex items-center gap-1">
+        <span className="text-error-500">*</span>
+        Required fields must be filled before creating the campaign.
+      </p>
+
+      {/* Footer info */}
       <div className="flex items-start gap-2 text-xs text-text-muted">
         <FileText size={12} className="mt-0.5 shrink-0" />
         <p>
-          Empty fields will be handled gracefully by the agent using its
-          fallback responses.
+          Empty optional fields will be handled gracefully by the agent using
+          its fallback responses.
         </p>
       </div>
 
-      {/* ── Actions ───────────────────────────────────────────────────────── */}
+      {/* Actions */}
       <div className="flex items-center gap-3 pt-2">
         <Button onClick={handleSubmit} loading={isCreating}>
           Create Campaign
@@ -358,7 +424,6 @@ export function CampaignVariablesStep({
   );
 }
 
-// ── Small auto-filled indicator dot ─────────────────────────────────────────
 function AutoFilledDot() {
   return (
     <div

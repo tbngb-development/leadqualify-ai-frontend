@@ -1,12 +1,12 @@
 // src/hooks/useCalls.ts
 
-'use client';
+"use client";
 
-import { useQuery } from '@tanstack/react-query';
-import { callsApi } from '@/lib/api/calls';
-import type { CallQueryParams } from '@/types';
+import { useQuery } from "@tanstack/react-query";
+import { callsApi } from "@/lib/api/calls";
+import type { CallQueryParams } from "@/types";
 
-export const CALLS_KEY = ['calls'] as const;
+export const CALLS_KEY = ["calls"] as const;
 
 export function useCalls(params: CallQueryParams = {}) {
   return useQuery({
@@ -25,8 +25,19 @@ export function useCall(id: string) {
 
 export function useCallTranscript(id: string) {
   return useQuery({
-    queryKey: [...CALLS_KEY, id, 'transcript'],
+    queryKey: [...CALLS_KEY, id, "transcript"],
     queryFn: () => callsApi.getTranscript(id),
     enabled: Boolean(id),
+  });
+}
+
+export function useCallStats(params: {
+  campaignId?: string;
+  leadId?: string;
+}) {
+  return useQuery({
+    queryKey: [...CALLS_KEY, "stats", params],
+    queryFn: () => callsApi.getStats(params),
+    enabled: Boolean(params.campaignId ?? params.leadId),
   });
 }

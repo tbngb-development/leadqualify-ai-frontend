@@ -1,10 +1,18 @@
 // src/components/campaigns/CSVUploader.tsx
+
 "use client";
 
 import { Button } from "@/components/ui/Button";
 import { useUploadCSV } from "@/hooks/useCampaigns";
 import { cn } from "@/lib/utils/cn";
-import { AlertCircle, FileText, Upload, X } from "lucide-react";
+import type { UploadResult } from "@/types";
+import {
+  AlertCircle,
+  CheckCircle2,
+  FileText,
+  Upload,
+  X,
+} from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 
 interface CSVUploaderProps {
@@ -15,28 +23,25 @@ export function CSVUploader({ campaignId }: CSVUploaderProps) {
   const [dragging, setDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [lastResult, setLastResult] = useState<UploadResult | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { mutate: upload, isPending } = useUploadCSV(campaignId);
 
-  // ✅ Stable validation extracted so both handlers share it
   const validateAndSet = useCallback((file: File) => {
     setError(null);
+    setLastResult(null);
 
     if (!file.name.toLowerCase().endsWith(".csv")) {
       setError("Only .csv files are accepted");
       return;
     }
-
-    // Optional: guard against huge files (e.g. 10 MB)
     if (file.size > 10 * 1024 * 1024) {
       setError("File must be smaller than 10 MB");
       return;
     }
-
     setSelectedFile(file);
   }, []);
 
-  // ✅ Drag handlers — stop ALL propagation on dragover
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -54,25 +59,21 @@ export function CSVUploader({ campaignId }: CSVUploaderProps) {
       e.preventDefault();
       e.stopPropagation();
       setDragging(false);
-
       const file = e.dataTransfer.files?.[0];
       if (file) validateAndSet(file);
     },
-    [validateAndSet],
+    [validateAndSet]
   );
 
-  // ✅ Input change — read from ref to be safe
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (file) validateAndSet(file);
-      // Reset input value so same file can be re-selected
       e.target.value = "";
     },
-    [validateAndSet],
+    [validateAndSet]
   );
 
-  // ✅ Separate click handler on the zone itself
   const handleZoneClick = useCallback(() => {
     inputRef.current?.click();
   }, []);
@@ -80,9 +81,10 @@ export function CSVUploader({ campaignId }: CSVUploaderProps) {
   const handleUpload = useCallback(() => {
     if (!selectedFile) return;
     upload(selectedFile, {
-      onSuccess: () => {
+      onSuccess: (result: UploadResult) => {
         setSelectedFile(null);
         setError(null);
+        setLastResult(result);
       },
       onError: (err: Error) => {
         setError(err?.message ?? "Upload failed. Please try again.");
@@ -97,7 +99,6 @@ export function CSVUploader({ campaignId }: CSVUploaderProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* ✅ Hidden input lives OUTSIDE the drop zone */}
       <input
         ref={inputRef}
         type="file"
@@ -114,7 +115,6 @@ export function CSVUploader({ campaignId }: CSVUploaderProps) {
         aria-label="Drop CSV file here or click to browse"
         onClick={handleZoneClick}
         onKeyDown={(e) => {
-          // ✅ Keyboard accessible
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
             inputRef.current?.click();
@@ -129,21 +129,21 @@ export function CSVUploader({ campaignId }: CSVUploaderProps) {
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500",
           dragging
             ? "border-brand-500 bg-brand-50"
-            : "border-surface-border hover:border-brand-300 hover:bg-brand-50/50",
+            : "border-surface-border hover:border-brand-300 hover:bg-brand-50/50"
         )}
       >
         <div className="flex flex-col items-center gap-2 pointer-events-none">
           <div
             className={cn(
               "flex h-12 w-12 items-center justify-center rounded-full transition-colors",
-              dragging ? "bg-brand-200" : "bg-brand-100",
+              dragging ? "bg-brand-200" : "bg-brand-100"
             )}
           >
             <Upload
               size={20}
               className={cn(
                 "transition-colors",
-                dragging ? "text-brand-700" : "text-brand-600",
+                dragging ? "text-brand-700" : "text-brand-600"
               )}
             />
           </div>
@@ -161,11 +161,60 @@ export function CSVUploader({ campaignId }: CSVUploaderProps) {
         </div>
       </div>
 
-      {/* Error state */}
+      {/* Error */}
       {error && (
         <div className="flex items-center gap-2 rounded-md bg-error-50 border border-error-100 p-3">
           <AlertCircle size={14} className="text-error-500 shrink-0" />
           <p className="text-xs text-error-600">{error}</p>
+        </div>
+      )}
+
+      {/* Upload result report */}
+      {lastResult && (
+        <div className="rounded-md border border-surface-border bg-surface-subtle p-4 flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={14} className="text-success-500 shrink-0" />
+            <p className="text-xs font-semibold text-text-primary">
+              Upload Complete
+            </p>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1">
+            <ResultStat label="Total rows" value={lastResult.total} />
+            <ResultStat
+              label="Imported"
+              value={lastResult.imported}
+              highlight="success"
+            />
+            <ResultStat
+              label="Duplicates skipped"
+              value={lastResult.duplicates}
+              highlight={lastResult.duplicates > 0 ? "warning" : undefined}
+            />
+            <ResultStat
+              label="Invalid rows"
+              value={lastResult.invalid}
+              highlight={lastResult.invalid > 0 ? "error" : undefined}
+            />
+          </div>
+
+          {/* Duplicate phone list */}
+          {lastResult.duplicateNumbers.length > 0 && (
+            <div className="mt-2">
+              <p className="text-xs font-medium text-text-muted mb-1">
+                Duplicate numbers skipped:
+              </p>
+              <div className="max-h-24 overflow-y-auto flex flex-wrap gap-1">
+                {lastResult.duplicateNumbers.map((phone) => (
+                  <span
+                    key={phone}
+                    className="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-mono bg-warning-50 text-warning-700 border border-warning-100"
+                  >
+                    {phone}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -197,7 +246,6 @@ export function CSVUploader({ campaignId }: CSVUploaderProps) {
               </p>
             </div>
           </div>
-
           <div className="flex items-center gap-2 shrink-0 ml-2">
             <Button
               size="sm"
@@ -215,7 +263,7 @@ export function CSVUploader({ campaignId }: CSVUploaderProps) {
               className={cn(
                 "flex h-7 w-7 items-center justify-center rounded",
                 "text-text-muted hover:bg-surface-hover",
-                "disabled:opacity-40 disabled:cursor-not-allowed",
+                "disabled:opacity-40 disabled:cursor-not-allowed"
               )}
             >
               <X size={14} />
@@ -223,6 +271,37 @@ export function CSVUploader({ campaignId }: CSVUploaderProps) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Result stat cell ──────────────────────────────────────────────────────────
+
+function ResultStat({
+  label,
+  value,
+  highlight,
+}: {
+  label: string;
+  value: number;
+  highlight?: "success" | "warning" | "error";
+}) {
+  const colorMap = {
+    success: "text-success-600",
+    warning: "text-warning-600",
+    error: "text-error-600",
+  };
+  return (
+    <div className="flex flex-col">
+      <p className="text-xs text-text-muted">{label}</p>
+      <p
+        className={cn(
+          "text-lg font-bold",
+          highlight ? colorMap[highlight] : "text-text-primary"
+        )}
+      >
+        {value}
+      </p>
     </div>
   );
 }
